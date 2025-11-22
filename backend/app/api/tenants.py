@@ -25,7 +25,7 @@ def list_tenants(
     """List tenants (superadmin sees all, tenant_admin sees only their tenant)."""
     if current_user.role == "superadmin":
         tenants = db.query(Tenant).all()
-    elif current_user.role == "tenant_admin" and current_user.tenant_id:
+    elif current_user.role in ("tenant_admin", "viewer") and current_user.tenant_id:
         tenants = db.query(Tenant).filter(Tenant.id == current_user.tenant_id).all()
     else:
         tenants = []
@@ -83,7 +83,9 @@ def get_tenant(
 ):
     """Get tenant details."""
     # Check tenant access
-    if current_user.role != "superadmin" and (current_user.role != "tenant_admin" or current_user.tenant_id != tenant_id):
+    if current_user.role != "superadmin" and (
+        (current_user.role not in ("tenant_admin", "viewer")) or current_user.tenant_id != tenant_id
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not enough permissions to access this tenant",
@@ -130,7 +132,54 @@ def update_tenant(
         tenant.aws_role_arn = tenant_data.aws_role_arn
     if tenant_data.aws_external_id is not None:
         tenant.aws_external_id = tenant_data.aws_external_id
+    if tenant_data.enabled_scanners is not None:
+        # Validate enabled_scanners
+        valid_scanners = ["IAM", "S3", "LOGGING", "EC2", "EBS", "RDS", "LAMBDA", "CLOUDWATCH"]
+        invalid_scanners = [s for s in tenant_data.enabled_scanners if s not in valid_scanners]
+        if invalid_scanners:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid scanner names: {', '.join(invalid_scanners)}. Valid scanners: {', '.join(valid_scanners)}",
+            )
+        tenant.enabled_scanners = tenant_data.enabled_scanners
     
+    db.commit()
+    db.refresh(tenant)
+    
+    return tenant
+
+
+@router.put("/{tenant_id}/scanners", response_model=TenantResponse)
+def update_enabled_scanners(
+    tenant_id: UUID,
+    enabled_scanners: List[str],
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Update enabled scanners for a tenant (superadmin or tenant_admin of this tenant)."""
+    # Check tenant access
+    if current_user.role != "superadmin" and (current_user.role != "tenant_admin" or current_user.tenant_id != tenant_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not enough permissions to access this tenant",
+        )
+    tenant = db.query(Tenant).filter(Tenant.id == tenant_id).first()
+    if not tenant:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Tenant not found",
+        )
+    
+    # Validate enabled_scanners
+    valid_scanners = ["IAM", "S3", "LOGGING", "EC2", "EBS", "RDS", "LAMBDA", "CLOUDWATCH"]
+    invalid_scanners = [s for s in enabled_scanners if s not in valid_scanners]
+    if invalid_scanners:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid scanner names: {', '.join(invalid_scanners)}. Valid scanners: {', '.join(valid_scanners)}",
+        )
+    
+    tenant.enabled_scanners = enabled_scanners
     db.commit()
     db.refresh(tenant)
     

@@ -15,6 +15,7 @@ class ScanRun(Base):
     started_at = Column(DateTime, nullable=True)
     finished_at = Column(DateTime, nullable=True)
     summary = Column(JSON, nullable=True)
+    scan_metadata = Column(JSON, nullable=True)  # Store scan metadata (scheduled, trigger source, etc.)
 
     tenant = relationship("Tenant", back_populates="scan_runs")
     findings = relationship("Finding", back_populates="scan_run", cascade="all, delete-orphan")

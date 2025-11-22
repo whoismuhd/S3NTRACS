@@ -17,19 +17,7 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Create users table
-    op.create_table(
-        'users',
-        sa.Column('id', postgresql.UUID(as_uuid=True), primary_key=True),
-        sa.Column('email', sa.String(), nullable=False),
-        sa.Column('password_hash', sa.String(), nullable=False),
-        sa.Column('role', sa.String(), nullable=False),
-        sa.Column('tenant_id', postgresql.UUID(as_uuid=True), nullable=True),
-        sa.ForeignKeyConstraint(['tenant_id'], ['tenants.id'], ),
-    )
-    op.create_index(op.f('ix_users_email'), 'users', ['email'], unique=True)
-
-    # Create tenants table
+    # Create tenants table first (users depends on it)
     op.create_table(
         'tenants',
         sa.Column('id', postgresql.UUID(as_uuid=True), primary_key=True),
@@ -71,6 +59,18 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(['tenant_id'], ['tenants.id'], ),
         sa.ForeignKeyConstraint(['scan_run_id'], ['scan_runs.id'], ),
     )
+
+    # Create users table
+    op.create_table(
+        'users',
+        sa.Column('id', postgresql.UUID(as_uuid=True), primary_key=True),
+        sa.Column('email', sa.String(), nullable=False),
+        sa.Column('password_hash', sa.String(), nullable=False),
+        sa.Column('role', sa.String(), nullable=False),
+        sa.Column('tenant_id', postgresql.UUID(as_uuid=True), nullable=True),
+        sa.ForeignKeyConstraint(['tenant_id'], ['tenants.id'], ),
+    )
+    op.create_index(op.f('ix_users_email'), 'users', ['email'], unique=True)
 
     # Create alerts table
     op.create_table(

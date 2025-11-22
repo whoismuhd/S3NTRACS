@@ -23,7 +23,9 @@ def trigger_scan(
 ):
     """Trigger a security scan for a tenant."""
     # Check tenant access
-    if current_user.role != "superadmin" and (current_user.role != "tenant_admin" or current_user.tenant_id != tenant_id):
+    if current_user.role != "superadmin" and (
+        (current_user.role not in ("tenant_admin", "viewer")) or current_user.tenant_id != tenant_id
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not enough permissions to access this tenant",
@@ -42,7 +44,6 @@ def trigger_scan(
         )
     
     # Create scan run record first
-    from app.models.scan_run import ScanRun
     from datetime import datetime
     
     scan_run = ScanRun(
@@ -68,7 +69,9 @@ def list_scans(
 ):
     """List all scan runs for a tenant."""
     # Check tenant access
-    if current_user.role != "superadmin" and (current_user.role != "tenant_admin" or current_user.tenant_id != tenant_id):
+    if current_user.role != "superadmin" and (
+        (current_user.role not in ("tenant_admin", "viewer")) or current_user.tenant_id != tenant_id
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not enough permissions to access this tenant",
@@ -89,7 +92,7 @@ def get_latest_scan(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Get the latest scan run for a tenant."""
+    """Get the latest scan run for a tenant with recalculated summary from actual findings."""
     # Check tenant access
     if current_user.role != "superadmin" and (current_user.role != "tenant_admin" or current_user.tenant_id != tenant_id):
         raise HTTPException(
@@ -108,6 +111,45 @@ def get_latest_scan(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="No scans found for this tenant",
         )
+    
+    # Recalculate summary from actual findings to ensure accuracy
+    # This handles cases where findings were deduplicated or updated after scan completion
+    from app.models.finding import Finding
+    from app.models.tenant import Tenant
+    
+    tenant = db.query(Tenant).filter(Tenant.id == tenant_id).first()
+    if tenant:
+        # Get all findings for this scan
+        all_findings = db.query(Finding).filter(Finding.scan_run_id == scan.id).all()
+        
+        # Filter by enabled scanners
+        enabled_scanners = tenant.enabled_scanners if tenant.enabled_scanners else ["IAM", "S3", "LOGGING", "EC2", "EBS", "RDS", "LAMBDA", "CLOUDWATCH"]
+        findings = [f for f in all_findings if f.category in enabled_scanners]
+        
+        # Recalculate summary from actual findings
+        by_severity = {
+            "CRITICAL": 0,
+            "HIGH": 0,
+            "MEDIUM": 0,
+            "LOW": 0,
+        }
+        by_category = {}
+        
+        for finding in findings:
+            by_severity[finding.severity] = by_severity.get(finding.severity, 0) + 1
+            by_category[finding.category] = by_category.get(finding.category, 0) + 1
+        
+        # Update summary with recalculated values
+        if scan.summary:
+            scan.summary["total_findings"] = len(findings)
+            scan.summary["by_severity"] = by_severity
+            scan.summary["by_category"] = by_category
+        else:
+            scan.summary = {
+                "total_findings": len(findings),
+                "by_severity": by_severity,
+                "by_category": by_category,
+            }
     
     return scan
 

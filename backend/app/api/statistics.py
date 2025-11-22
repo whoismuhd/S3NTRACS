@@ -66,16 +66,7 @@ def get_dashboard_stats(
             latest_scan_ids.append(latest_scan.id)
     
     # Count findings by severity (only if we have scans)
-    if latest_scan_ids:
-        severity_counts = (
-            db.query(Finding.severity, func.count(Finding.id))
-            .filter(Finding.scan_run_id.in_(latest_scan_ids))
-            .group_by(Finding.severity)
-            .all()
-        )
-    else:
-        severity_counts = []
-    
+    # Filter by enabled scanners for each tenant
     findings_by_severity = {
         "CRITICAL": 0,
         "HIGH": 0,
@@ -83,18 +74,78 @@ def get_dashboard_stats(
         "LOW": 0,
     }
     
-    for severity, count in severity_counts:
-        findings_by_severity[severity] = count
-    
-    # Count findings by category (only if we have scans)
     if latest_scan_ids:
-        category_counts = (
-            db.query(Finding.category, func.count(Finding.id))
+        # Get tenants with their enabled scanners
+        tenants = db.query(Tenant).filter(Tenant.id.in_(tenant_ids)).all()
+        tenant_enabled_scanners = {
+            t.id: (t.enabled_scanners if t.enabled_scanners else ["IAM", "S3", "LOGGING"])
+            for t in tenants
+        }
+        
+        # Get scan to tenant mapping
+        scan_tenant_map = {}
+        for tenant_id in tenant_ids:
+            latest_scan = (
+                db.query(ScanRun)
+                .filter(ScanRun.tenant_id == tenant_id)
+                .order_by(ScanRun.started_at.desc())
+                .first()
+            )
+            if latest_scan:
+                scan_tenant_map[latest_scan.id] = tenant_id
+        
+        # Filter findings by enabled scanners
+        all_findings = (
+            db.query(Finding)
             .filter(Finding.scan_run_id.in_(latest_scan_ids))
-            .group_by(Finding.category)
             .all()
         )
-        findings_by_category = {category: count for category, count in category_counts}
+        
+        # Count by severity, only including enabled scanners
+        for finding in all_findings:
+            tenant_id = scan_tenant_map.get(finding.scan_run_id)
+            if tenant_id:
+                enabled = tenant_enabled_scanners.get(tenant_id, ["IAM", "S3", "LOGGING"])
+                if finding.category in enabled:
+                    findings_by_severity[finding.severity] = findings_by_severity.get(finding.severity, 0) + 1
+    
+    # Count findings by category (only if we have scans)
+    # Filter by enabled scanners for each tenant
+    if latest_scan_ids:
+        # Get tenants with their enabled scanners
+        tenants = db.query(Tenant).filter(Tenant.id.in_(tenant_ids)).all()
+        tenant_enabled_scanners = {
+            t.id: (t.enabled_scanners if t.enabled_scanners else ["IAM", "S3", "LOGGING"])
+            for t in tenants
+        }
+        
+        # Get scan to tenant mapping
+        scan_tenant_map = {}
+        for tenant_id in tenant_ids:
+            latest_scan = (
+                db.query(ScanRun)
+                .filter(ScanRun.tenant_id == tenant_id)
+                .order_by(ScanRun.started_at.desc())
+                .first()
+            )
+            if latest_scan:
+                scan_tenant_map[latest_scan.id] = tenant_id
+        
+        # Filter findings by enabled scanners
+        all_findings = (
+            db.query(Finding)
+            .filter(Finding.scan_run_id.in_(latest_scan_ids))
+            .all()
+        )
+        
+        # Count by category, only including enabled scanners
+        findings_by_category = {}
+        for finding in all_findings:
+            tenant_id = scan_tenant_map.get(finding.scan_run_id)
+            if tenant_id:
+                enabled = tenant_enabled_scanners.get(tenant_id, ["IAM", "S3", "LOGGING"])
+                if finding.category in enabled:
+                    findings_by_category[finding.category] = findings_by_category.get(finding.category, 0) + 1
     else:
         findings_by_category = {}
     
@@ -148,7 +199,9 @@ def get_tenant_statistics(
 ) -> Dict[str, Any]:
     """Get statistics for a specific tenant."""
     # Check tenant access
-    if current_user.role != "superadmin" and (current_user.role != "tenant_admin" or current_user.tenant_id != tenant_id):
+    if current_user.role != "superadmin" and (
+        (current_user.role not in ("tenant_admin", "viewer")) or current_user.tenant_id != tenant_id
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not enough permissions to access this tenant",
@@ -186,8 +239,12 @@ def get_tenant_statistics(
             "scan_status": None,
         }
     
-    # Get findings for latest scan
-    findings = db.query(Finding).filter(Finding.scan_run_id == latest_scan.id).all()
+    # Get findings for latest scan, filtered by enabled scanners
+    all_findings = db.query(Finding).filter(Finding.scan_run_id == latest_scan.id).all()
+    
+    # Filter by enabled scanners
+    enabled_scanners = tenant.enabled_scanners if tenant.enabled_scanners else ["IAM", "S3", "LOGGING"]
+    findings = [f for f in all_findings if f.category in enabled_scanners]
     
     findings_by_severity = {
         "CRITICAL": 0,

@@ -1,0 +1,36 @@
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="favGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2563EB;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1E40AF;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="favCloud" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#93C5FD;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#60A5FA;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <rect width="32" height="32" rx="6" fill="url(#favGrad)"/>
+  
+  <!-- Text -->
+  <text 
+    x="16" 
+    y="16" 
+    font-family="system-ui, sans-serif" 
+    font-size="11" 
+    font-weight="900" 
+    fill="#FFFFFF" 
+    text-anchor="middle" 
+    letter-spacing="-0.5px">
+    S3
+  </text>
+  
+  <!-- Cloud below -->
+  <g transform="translate(16, 22)">
+    <path d="M-8 2 Q-9 1 -8 0 Q-7 -1 -6 0 Q-5 -1 -4 0 Q-3 -1 -2 0 Q-1 -1 0 0 Q1 -1 2 0 Q3 -1 4 0 Q5 -1 6 0 Q7 -1 8 0 Q9 1 8 2 Q8 3 7 3 Q6 3 5.5 3 Q5 3.5 4 3.5 Q3 3.5 0 3.5 Q-3 3.5 -4 3.5 Q-5 3.5 -5.5 3 Q-6 3 -7 3 Q-8 3 -8 2 Z" 
+          fill="url(#favCloud)"/>
+    <ellipse cx="-2" cy="2.5" rx="2" ry="1.5" fill="#FFFFFF" opacity="0.4"/>
+    <ellipse cx="0" cy="2.8" rx="2.5" ry="1.8" fill="#FFFFFF" opacity="0.3"/>
+    <ellipse cx="2" cy="2.5" rx="2" ry="1.5" fill="#FFFFFF" opacity="0.4"/>
+  </g>
+</svg>

@@ -2,6 +2,11 @@
   "name": "s3ntracs-frontend",
   "private": true,
   "version": "0.1.0",
+  "description": "S3ntraCS - Cloud Security Posture Management Frontend",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/whoismuhd/S3NTRACS.git"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",

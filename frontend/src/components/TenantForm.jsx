@@ -3,6 +3,8 @@ import api from '../api'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
 
+const AVAILABLE_SCANNERS = ['IAM', 'S3', 'LOGGING', 'EC2', 'EBS', 'RDS', 'LAMBDA', 'CLOUDWATCH']
+
 export default function TenantForm({ onSuccess, onCancel }) {
   const [formData, setFormData] = useState({
     name: '',
@@ -10,6 +12,7 @@ export default function TenantForm({ onSuccess, onCancel }) {
     aws_account_id: '',
     aws_role_arn: '',
     aws_external_id: '',
+    enabled_scanners: AVAILABLE_SCANNERS, // Default to all scanners
   })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -39,6 +42,7 @@ export default function TenantForm({ onSuccess, onCancel }) {
         aws_account_id: '',
         aws_role_arn: '',
         aws_external_id: '',
+        enabled_scanners: AVAILABLE_SCANNERS,
       })
     } catch (err) {
       const errorMsg = err.response?.data?.detail || 'Failed to create tenant'
@@ -51,27 +55,27 @@ export default function TenantForm({ onSuccess, onCancel }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="border-b border-gray-200 pb-4">
-        <h3 className="text-lg font-semibold text-gray-900">Create New Tenant</h3>
-        <p className="mt-1 text-sm text-gray-500">
+      <div className="border-b border-gray-200 dark:border-gray-700 pb-4">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Create New Tenant</h3>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-300">
           Configure AWS account access for security scanning
         </p>
       </div>
       
       {error && (
-        <div className="rounded-lg bg-red-50 border border-red-200 p-4 animate-fade-in">
+        <div className="rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4 animate-fade-in">
           <div className="flex">
-            <svg className="w-5 h-5 text-red-400 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <svg className="w-5 h-5 text-red-400 dark:text-red-500 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
             </svg>
-            <div className="text-sm text-red-800">{error}</div>
+            <div className="text-sm text-red-800 dark:text-red-200">{error}</div>
           </div>
         </div>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+          <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Tenant Name <span className="text-red-500">*</span>
           </label>
           <input
@@ -80,13 +84,13 @@ export default function TenantForm({ onSuccess, onCancel }) {
             required
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+            className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
             placeholder="Acme Corp"
           />
         </div>
 
         <div>
-          <label htmlFor="aws_account_id" className="block text-sm font-medium text-gray-700 mb-2">
+          <label htmlFor="aws_account_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             AWS Account ID
           </label>
           <input
@@ -94,16 +98,16 @@ export default function TenantForm({ onSuccess, onCancel }) {
             id="aws_account_id"
             value={formData.aws_account_id}
             onChange={(e) => setFormData({ ...formData, aws_account_id: e.target.value })}
-            className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm transition-colors"
+            className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm transition-colors"
             placeholder="123456789012"
             pattern="[0-9]{12}"
           />
-          <p className="mt-1 text-xs text-gray-500">12-digit AWS account identifier</p>
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-300">12-digit AWS account identifier</p>
         </div>
       </div>
 
       <div>
-        <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
+        <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           Description
         </label>
         <textarea
@@ -111,13 +115,13 @@ export default function TenantForm({ onSuccess, onCancel }) {
           rows={2}
           value={formData.description}
           onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-          className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+          className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
           placeholder="Optional description or notes about this tenant"
         />
       </div>
 
       <div>
-        <label htmlFor="aws_role_arn" className="block text-sm font-medium text-gray-700 mb-2">
+        <label htmlFor="aws_role_arn" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           AWS Role ARN <span className="text-red-500">*</span>
         </label>
         <input
@@ -126,16 +130,16 @@ export default function TenantForm({ onSuccess, onCancel }) {
           required
           value={formData.aws_role_arn}
           onChange={(e) => setFormData({ ...formData, aws_role_arn: e.target.value })}
-          className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm transition-colors"
+          className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm transition-colors"
           placeholder="arn:aws:iam::123456789012:role/S3ntraCSRole"
         />
-        <p className="mt-1 text-xs text-gray-500">
+        <p className="mt-1 text-xs text-gray-500 dark:text-gray-300">
           IAM role ARN that S3ntraCS will assume for scanning
         </p>
       </div>
 
       <div>
-        <label htmlFor="aws_external_id" className="block text-sm font-medium text-gray-700 mb-2">
+        <label htmlFor="aws_external_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           External ID <span className="text-red-500">*</span>
         </label>
         <input
@@ -144,18 +148,55 @@ export default function TenantForm({ onSuccess, onCancel }) {
           required
           value={formData.aws_external_id}
           onChange={(e) => setFormData({ ...formData, aws_external_id: e.target.value })}
-          className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm transition-colors"
+          className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm transition-colors"
           placeholder="unique-external-id-here"
         />
-        <p className="mt-1 text-xs text-gray-500">
+        <p className="mt-1 text-xs text-gray-500 dark:text-gray-300">
           Unique identifier for secure cross-account access. This must match the ExternalId condition in the IAM role trust policy.
         </p>
       </div>
 
-      <div className="flex gap-3 pt-4 border-t border-gray-200">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+          Enabled Scanners
+        </label>
+        <p className="text-xs text-gray-500 dark:text-gray-300 mb-3">
+          Select which AWS services you want to scan for security issues
+        </p>
+        <div className="space-y-2">
+          {AVAILABLE_SCANNERS.map((scanner) => (
+            <label key={scanner} className="flex items-center p-3 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors">
+              <input
+                type="checkbox"
+                checked={formData.enabled_scanners.includes(scanner)}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    setFormData({
+                      ...formData,
+                      enabled_scanners: [...formData.enabled_scanners, scanner],
+                    })
+                  } else {
+                    setFormData({
+                      ...formData,
+                      enabled_scanners: formData.enabled_scanners.filter(s => s !== scanner),
+                    })
+                  }
+                }}
+                className="h-4 w-4 text-blue-600 dark:text-blue-500 rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 focus:ring-blue-500"
+              />
+              <span className="ml-3 text-sm font-medium text-gray-700 dark:text-gray-300">{scanner}</span>
+            </label>
+          ))}
+        </div>
+        {formData.enabled_scanners.length === 0 && (
+          <p className="mt-2 text-xs text-red-600 dark:text-red-400">At least one scanner must be enabled</p>
+        )}
+      </div>
+
+      <div className="flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || formData.enabled_scanners.length === 0}
           className="flex-1 inline-flex justify-center items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
         >
           {loading ? (
@@ -179,7 +220,7 @@ export default function TenantForm({ onSuccess, onCancel }) {
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
           >
             Cancel
           </button>

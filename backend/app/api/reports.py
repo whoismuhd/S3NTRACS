@@ -6,6 +6,7 @@ from uuid import UUID
 from app.db.session import get_db
 from app.models.finding import Finding
 from app.models.scan_run import ScanRun
+from app.models.tenant import Tenant
 from app.models.user import User
 from app.api.deps import get_current_user
 
@@ -48,8 +49,20 @@ def generate_compliance_report(
             detail=f"Latest scan is not completed (status: {scan.status})",
         )
     
-    # Get all findings for this scan
-    findings = db.query(Finding).filter(Finding.scan_run_id == scan.id).all()
+    # Get tenant to check enabled scanners
+    tenant = db.query(Tenant).filter(Tenant.id == tenant_id).first()
+    if not tenant:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Tenant not found",
+        )
+    
+    # Get all findings for this scan, filtered by enabled scanners
+    all_findings = db.query(Finding).filter(Finding.scan_run_id == scan.id).all()
+    
+    # Filter by enabled scanners
+    enabled_scanners = tenant.enabled_scanners if tenant.enabled_scanners else ["IAM", "S3", "LOGGING"]
+    findings = [f for f in all_findings if f.category in enabled_scanners]
     
     # Group by compliance framework
     compliance_mapping = {

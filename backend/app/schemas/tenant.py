@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 from uuid import UUID
 from datetime import datetime
 
@@ -18,6 +18,7 @@ class TenantUpdate(BaseModel):
     aws_account_id: Optional[str] = None
     aws_role_arn: Optional[str] = None
     aws_external_id: Optional[str] = None
+    enabled_scanners: Optional[List[str]] = None
 
 
 class TenantResponse(BaseModel):
@@ -27,6 +28,7 @@ class TenantResponse(BaseModel):
     aws_account_id: Optional[str] = None
     aws_role_arn: str
     aws_external_id: str
+    enabled_scanners: Optional[List[str]] = None
     created_at: datetime
     updated_at: datetime
 

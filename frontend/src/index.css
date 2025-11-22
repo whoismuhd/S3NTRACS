@@ -3,19 +3,31 @@
 @tailwind utilities;
 
 @layer base {
-  body {
-    margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-      'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-      sans-serif;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    background-color: #f9fafb;
+  * {
+    @apply border-gray-200 dark:border-gray-700;
   }
-
-  code {
-    font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-      monospace;
+  
+  body {
+    @apply bg-gray-50 dark:bg-gray-900;
+    @apply text-gray-900 dark:text-gray-100;
+    @apply antialiased;
+    font-feature-settings: 'rlig' 1, 'calt' 1;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold tracking-tight;
+  }
+  
+  h1 {
+    @apply text-4xl md:text-5xl;
+  }
+  
+  h2 {
+    @apply text-3xl md:text-4xl;
+  }
+  
+  h3 {
+    @apply text-2xl md:text-3xl;
   }
 }
 
@@ -31,16 +43,70 @@
   .animate-pulse-slow {
     animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
+
+  .animate-shimmer {
+    animation: shimmer 2s infinite;
+  }
+  
+  /* Professional card styles */
+  .card {
+    @apply bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700;
+    @apply transition-all duration-200;
+  }
+  
+  .card-hover {
+    @apply hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600;
+    @apply transition-all duration-200;
+  }
+  
+  .card-elevated {
+    @apply shadow-lg border-gray-200 dark:border-gray-700;
+  }
+  
+  /* Professional button styles */
+  .btn {
+    @apply inline-flex items-center justify-center;
+    @apply px-4 py-2 rounded-lg font-medium;
+    @apply transition-all duration-200;
+    @apply focus:outline-none focus:ring-2 focus:ring-offset-2;
+  }
+  
+  .btn-primary {
+    @apply bg-blue-600 text-white;
+    @apply hover:bg-blue-700 focus:ring-blue-500;
+    @apply shadow-sm hover:shadow-md;
+  }
+  
+  .btn-secondary {
+    @apply bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100;
+    @apply hover:bg-gray-200 dark:hover:bg-gray-600;
+    @apply focus:ring-gray-500;
+  }
+  
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-gray-100 dark:bg-gray-800;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-gray-300 dark:bg-gray-600 rounded-full;
+    @apply hover:bg-gray-400 dark:hover:bg-gray-500;
+  }
 }
 
 @keyframes slideIn {
   from {
-    transform: translateX(100%);
     opacity: 0;
+    transform: translateY(-10px);
   }
   to {
-    transform: translateX(0);
     opacity: 1;
+    transform: translateY(0);
   }
 }
 
@@ -53,22 +119,105 @@
   }
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
 }
 
-::-webkit-scrollbar-track {
-  background: #f1f1f1;
+/* Smooth transitions for all interactive elements */
+button, a, input, select, textarea {
+  @apply transition-all duration-200 ease-in-out;
 }
 
-::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 4px;
+/* Focus styles */
+*:focus-visible {
+  @apply outline-none ring-2 ring-blue-500 ring-offset-2;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+/* Better table styles */
+table {
+  @apply w-full;
 }
 
+thead {
+  @apply bg-gray-50 dark:bg-gray-800/50;
+}
+
+th {
+  @apply px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider;
+}
+
+td {
+  @apply px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100;
+}
+
+tr {
+  @apply border-b border-gray-200 dark:border-gray-700;
+  @apply transition-colors duration-150;
+}
+
+tr:hover {
+  @apply bg-gray-50 dark:bg-gray-800/50;
+}
+
+/* Input styles */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="search"],
+textarea,
+select {
+  @apply block w-full rounded-lg border border-gray-300 dark:border-gray-600;
+  @apply bg-white dark:bg-gray-800;
+  @apply px-4 py-2.5 text-sm;
+  @apply text-gray-900 dark:text-gray-100;
+  @apply placeholder-gray-500 dark:placeholder-gray-400;
+  @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500;
+  @apply transition-all duration-200;
+}
+
+/* Autofill styling */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+select:-webkit-autofill,
+select:-webkit-autofill:hover,
+select:-webkit-autofill:focus {
+  box-shadow: 0 0 0px 1000px #fff inset;
+  -webkit-text-fill-color: #1f2937;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+.dark input:-webkit-autofill,
+.dark input:-webkit-autofill:hover,
+.dark input:-webkit-autofill:focus,
+.dark textarea:-webkit-autofill,
+.dark textarea:-webkit-autofill:hover,
+.dark textarea:-webkit-autofill:focus,
+.dark select:-webkit-autofill,
+.dark select:-webkit-autofill:hover,
+.dark select:-webkit-autofill:focus {
+  box-shadow: 0 0 0px 1000px #374151 inset;
+  -webkit-text-fill-color: #f9fafb;
+}
+
+/* Professional shadows */
+.shadow-soft {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.shadow-medium {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.06);
+}
+
+.shadow-strong {
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.08);
+}

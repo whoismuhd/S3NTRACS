@@ -1,0 +1,132 @@
+name: Security Scan with S3ntraCS
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    name: AWS Security Scan
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Trigger S3ntraCS Security Scan
+        env:
+          S3NTRACS_API_URL: ${{ secrets.S3NTRACS_API_URL || 'http://localhost:8000' }}
+          S3NTRACS_API_TOKEN: ${{ secrets.S3NTRACS_API_TOKEN }}
+          TENANT_ID: ${{ secrets.S3NTRACS_TENANT_ID }}
+        run: |
+          echo "🔒 Triggering security scan via S3ntraCS..."
+          
+          response=$(curl -X POST "${S3NTRACS_API_URL}/github/ci-scan" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${S3NTRACS_API_TOKEN}" \
+            -d "{
+              \"ci_type\": \"github_actions\",
+              \"tenant_id\": \"${TENANT_ID}\",
+              \"repo\": \"${{ github.repository }}\",
+              \"branch\": \"${{ github.ref_name }}\",
+              \"commit_sha\": \"${{ github.sha }}\"
+            }" 2>/dev/null)
+          
+          echo "Scan response: $response"
+          
+          # Extract scan ID
+          SCAN_ID=$(echo $response | grep -o '"scan_id":"[^"]*' | cut -d'"' -f4)
+          
+          if [ -z "$SCAN_ID" ]; then
+            echo "⚠️ Failed to trigger scan"
+            exit 1
+          fi
+          
+          echo "✅ Scan triggered: $SCAN_ID"
+          echo "SCAN_ID=$SCAN_ID" >> $GITHUB_ENV
+      
+      - name: Wait for scan completion
+        env:
+          S3NTRACS_API_URL: ${{ secrets.S3NTRACS_API_URL || 'http://localhost:8000' }}
+          S3NTRACS_API_TOKEN: ${{ secrets.S3NTRACS_API_TOKEN }}
+          TENANT_ID: ${{ secrets.S3NTRACS_TENANT_ID }}
+        run: |
+          echo "⏳ Waiting for scan to complete..."
+          max_attempts=60
+          attempt=0
+          
+          while [ $attempt -lt $max_attempts ]; do
+            sleep 10
+            attempt=$((attempt + 1))
+            
+            # Check scan status (you'll need to implement this endpoint)
+            status=$(curl -s -X GET "${S3NTRACS_API_URL}/scans/${TENANT_ID}" \
+              -H "Authorization: Bearer ${S3NTRACS_API_TOKEN}" | \
+              jq -r ".[0].status" 2>/dev/null || echo "running")
+            
+            if [ "$status" = "completed" ]; then
+              echo "✅ Scan completed!"
+              break
+            fi
+            
+            echo "Scan status: $status (attempt $attempt/$max_attempts)"
+          done
+      
+      - name: Get scan results
+        env:
+          S3NTRACS_API_URL: ${{ secrets.S3NTRACS_API_URL || 'http://localhost:8000' }}
+          S3NTRACS_API_TOKEN: ${{ secrets.S3NTRACS_API_TOKEN }}
+          TENANT_ID: ${{ secrets.S3NTRACS_TENANT_ID }}
+        run: |
+          echo "📊 Fetching scan results..."
+          
+          # Get findings
+          findings=$(curl -s -X GET "${S3NTRACS_API_URL}/findings/${TENANT_ID}?severity=CRITICAL&severity=HIGH" \
+            -H "Authorization: Bearer ${S3NTRACS_API_TOKEN}")
+          
+          critical_count=$(echo $findings | jq '[.[] | select(.severity == "CRITICAL")] | length' 2>/dev/null || echo "0")
+          high_count=$(echo $findings | jq '[.[] | select(.severity == "HIGH")] | length' 2>/dev/null || echo "0")
+          
+          echo "🔴 Critical findings: $critical_count"
+          echo "🟠 High findings: $high_count"
+          
+          if [ "$critical_count" -gt 0 ] || [ "$high_count" -gt 5 ]; then
+            echo "⚠️ Security issues detected!"
+            echo "critical_count=$critical_count" >> $GITHUB_ENV
+            echo "high_count=$high_count" >> $GITHUB_ENV
+          fi
+      
+      - name: Post PR comment with findings
+        if: github.event_name == 'pull_request'
+        env:
+          S3NTRACS_API_URL: ${{ secrets.S3NTRACS_API_URL || 'http://localhost:8000' }}
+          S3NTRACS_API_TOKEN: ${{ secrets.S3NTRACS_API_TOKEN }}
+          TENANT_ID: ${{ secrets.S3NTRACS_TENANT_ID }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "💬 Posting findings as PR comment..."
+          
+          curl -X POST "${S3NTRACS_API_URL}/github/pr-comment/${TENANT_ID}" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${S3NTRACS_API_TOKEN}" \
+            -d "{
+              \"repo_owner\": \"${{ github.repository_owner }}\",
+              \"repo_name\": \"${{ github.event.repository.name }}\",
+              \"pr_number\": ${{ github.event.pull_request.number }}
+            }"
+      
+      - name: Fail on critical findings
+        if: env.critical_count > 0
+        run: |
+          echo "❌ Build failed due to critical security findings"
+          exit 1
+
+
+
+
+

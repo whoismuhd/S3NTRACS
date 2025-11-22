@@ -1,20 +1,45 @@
 from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
-from passlib.context import CryptContext
+import bcrypt
 from app.core.config import settings
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a password against a hash."""
-    return pwd_context.verify(plain_password, hashed_password)
+    try:
+        return bcrypt.checkpw(
+            plain_password.encode('utf-8'),
+            hashed_password.encode('utf-8')
+        )
+    except Exception:
+        return False
 
 
 def get_password_hash(password: str) -> str:
-    """Hash a password."""
-    return pwd_context.hash(password)
+    """Hash a password using bcrypt.
+    
+    bcrypt has a 72-byte limit. We ensure the password fits within this limit.
+    """
+    # Ensure password doesn't exceed 72 bytes
+    password_bytes = password.encode('utf-8')
+    if len(password_bytes) > 72:
+        # Truncate to 72 bytes, being careful with UTF-8 boundaries
+        password_bytes = password_bytes[:72]
+        # Try to decode, but remove any incomplete UTF-8 sequences at the end
+        while password_bytes:
+            try:
+                password_bytes.decode('utf-8')
+                break
+            except UnicodeDecodeError:
+                password_bytes = password_bytes[:-1]
+        if not password_bytes:
+            # Fallback: use first 70 bytes
+            password_bytes = password.encode('utf-8')[:70]
+    
+    # Hash using bcrypt with salt rounds (default is 12)
+    hashed = bcrypt.hashpw(password_bytes, bcrypt.gensalt())
+    return hashed.decode('utf-8')
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
@@ -35,6 +60,16 @@ def decode_access_token(token: str) -> Optional[dict]:
     try:
         payload = jwt.decode(token, settings.JWT_SECRET, algorithms=["HS256"])
         return payload
-    except JWTError:
+    except JWTError as e:
+        # Log the error for debugging
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(f"JWT decode error: {str(e)}")
         return None
+
+
+def generate_reset_token() -> str:
+    """Generate a secure random token for password reset."""
+    import secrets
+    return secrets.token_urlsafe(32)
 

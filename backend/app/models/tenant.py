@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 from sqlalchemy import Column, String, DateTime
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, JSON
 from sqlalchemy.orm import relationship
 from app.db.base import Base
 
@@ -15,6 +15,9 @@ class Tenant(Base):
     aws_account_id = Column(String, nullable=True)
     aws_role_arn = Column(String, nullable=False)
     aws_external_id = Column(String, nullable=False)
+    notification_preferences = Column(JSON, nullable=True)  # Store email/Slack config
+    scan_schedule = Column(JSON, nullable=True)  # Store scan schedule config
+    enabled_scanners = Column(JSON, nullable=True)  # Store which scanners are enabled (e.g., ["IAM", "S3", "LOGGING"])
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

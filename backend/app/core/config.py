@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     
     # Application
     LOG_LEVEL: str = "INFO"
+    DEBUG: bool = False
     
     class Config:
         env_file = ".env"

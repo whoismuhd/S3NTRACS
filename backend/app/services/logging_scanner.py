@@ -1,6 +1,7 @@
 import boto3
 from typing import List, Dict
 from botocore.exceptions import ClientError
+from app.core.config import settings
 
 
 def scan_logging(session: boto3.Session) -> List[Dict]:
@@ -13,7 +14,7 @@ def scan_logging(session: boto3.Session) -> List[Dict]:
     
     # Check CloudTrail
     try:
-        cloudtrail = session.client("cloudtrail")
+        cloudtrail = session.client("cloudtrail", region_name=settings.AWS_REGION)
         trails = cloudtrail.describe_trails()
         
         enabled_trails = [t for t in trails.get("trailList", []) if t.get("IsLogging", False)]
@@ -56,7 +57,7 @@ def scan_logging(session: boto3.Session) -> List[Dict]:
     
     # Check GuardDuty (optional)
     try:
-        guardduty = session.client("guardduty")
+        guardduty = session.client("guardduty", region_name=settings.AWS_REGION)
         detectors = guardduty.list_detectors()
         
         detector_ids = detectors.get("DetectorIds", [])

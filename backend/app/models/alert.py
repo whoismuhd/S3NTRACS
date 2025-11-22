@@ -1,5 +1,6 @@
 import uuid
-from sqlalchemy import Column, String, ForeignKey
+from datetime import datetime
+from sqlalchemy import Column, String, ForeignKey, Text, DateTime
 from sqlalchemy.dialects.postgresql import UUID
 from app.db.base import Base
 
@@ -12,4 +13,7 @@ class Alert(Base):
     finding_id = Column(UUID(as_uuid=True), ForeignKey("findings.id"), nullable=False)
     channel = Column(String, nullable=False)  # email, slack, webhook
     status = Column(String, nullable=False, default="sent")  # sent, failed
+    created_at = Column(DateTime, default=datetime.utcnow)
+    sent_at = Column(DateTime, nullable=True)
+    error_message = Column(Text, nullable=True)
 
